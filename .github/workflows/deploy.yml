@@ -25,32 +25,63 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Repair payload part 9 if needed
+      - name: Validate and repair payload parts
         run: |
           python3 - <<'PY'
           import hashlib
           from pathlib import Path
-          p=Path("build/payload/09.b64")
-          s=p.read_text()
-          target="75a9e4222f05767584b537d10890928522cd97c1"
+
+          targets = {
+            "01.b64": ("1a596d1f36acb3d3d186cff039f96ada3fcc6c6f", "sub"),
+            "02.b64": ("7f8f07512a15512c1864f58ba9fb93795887d682", "same"),
+            "03.b64": ("151ae4bf54b4a5a8fb9a216d2818abad275a59b6", "same"),
+            "04.b64": ("f2d325aa9aa8c05c7698d92991edc59e274ed6f1", "sub"),
+            "05.b64": ("0498b25582629c1a1b919e215786e0eea524d02b", "same"),
+            "06.b64": ("728c7621e8075e79ac30e1bd472266a01ca5b714", "same"),
+            "07.b64": ("ea7e68daec307107be9ea3e20df01c45f595f94e", "same"),
+            "08.b64": ("ec44f516b4460286c6738e80ecfa57c663550fd3", "same"),
+            "09.b64": ("75a9e4222f05767584b537d10890928522cd97c1", "insert"),
+            "10.b64": ("612c2b787df9cad899ffb5d4cc366c607649f91e", "same"),
+            "11.b64": ("36bc66089d852136afc78833c9f8a1f5ebed924a", "same"),
+          }
+          chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+
           def blob_sha(x):
               return hashlib.sha1(("blob "+str(len(x))+"\0"+x).encode()).hexdigest()
-          if blob_sha(s) != target:
-              chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+
+          for name,(target,kind) in targets.items():
+              p=Path("build/payload")/name
+              s=p.read_text()
+              if blob_sha(s)==target:
+                  continue
               found=None
-              for i in range(len(s)+1):
-                  for ch in chars:
-                      candidate=s[:i]+ch+s[i:]
-                      if blob_sha(candidate)==target:
-                          found=candidate
-                          break
-                  if found: break
+              if kind=="insert":
+                  for i in range(len(s)+1):
+                      for ch in chars:
+                          c=s[:i]+ch+s[i:]
+                          if blob_sha(c)==target:
+                              found=c; break
+                      if found: break
+              elif kind=="sub":
+                  for i in range(len(s)):
+                      old=s[i]
+                      for ch in chars:
+                          if ch==old: continue
+                          c=s[:i]+ch+s[i+1:]
+                          if blob_sha(c)==target:
+                              found=c; break
+                      if found: break
               if not found:
-                  raise SystemExit("Could not repair payload part 9")
+                  raise SystemExit("Could not repair "+name)
               p.write_text(found)
-              print("Repaired payload part 9")
-          else:
-              print("Payload part 9 already correct")
+              print("Repaired", name)
+
+          for name,(target,_) in targets.items():
+              actual=blob_sha((Path("build/payload")/name).read_text())
+              if actual!=target:
+                  raise SystemExit("Hash mismatch after repair: "+name)
+          print("All payload parts validated")
+          PY
 
       - name: Rebuild approved Phase 1 v12 site
         run: |
