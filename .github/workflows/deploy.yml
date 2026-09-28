@@ -123,6 +123,20 @@ jobs:
           test -s _site/index.html
           python3 - <<'PY'
           from pathlib import Path
+          import re
+          p=Path("_site/index.html")
+          h=p.read_text(encoding="utf-8")
+          # Version is a release detail for the landing screen only.
+          h=re.sub(r'<title>.*?</title>', '<title>Mission NDA — Phase 1 v14</title>', h, count=1, flags=re.S|re.I)
+          if 'id="missionReleaseVersion"' not in h:
+              h=h.replace('<h1>Welcome</h1>', '<h1>Welcome</h1><div id="missionReleaseVersion" class="small muted" style="margin:-2px 0 14px;font-weight:700">Phase 1 — v14</div>', 1)
+          h=re.sub(r'(header[^>]*>.*?<div class="sub">).*?(</div>)', r'\\1Grade 3 • Foundation phase • Modular curriculum + assessment system\\2', h, count=1, flags=re.S|re.I)
+          h=h.replace('Phase 1 — v11','Phase 1 — v14').replace('Phase 1 — v12','Phase 1 — v14').replace('Phase 1 — v13','Phase 1 — v14')
+          p.write_text(h,encoding="utf-8")
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          h=Path("_site/index.html").read_text(encoding="utf-8")
           h=Path("_site/index.html").read_text(encoding="utf-8")
           checks={
             "v14": "Phase 1 — v14" in h,
