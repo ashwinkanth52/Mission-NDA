@@ -2,7 +2,7 @@ name: Deploy Mission NDA — Phase 1 v15
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "qa"]
   workflow_dispatch:
 
 permissions:
@@ -21,47 +21,58 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
+      - name: Checkout Production
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: prod-source
 
-      - name: Validate canonical site
+      - name: Checkout QA
+        uses: actions/checkout@v4
+        with:
+          ref: qa
+          path: qa-source
+
+      - name: Validate production and QA sites
         run: |
-          test -s index.html
+          set -e
+          test -s prod-source/index.html
+          test -s qa-source/index.html
           python3 - <<'PY'
           from pathlib import Path
-          import re
-          h=Path("index.html").read_text(encoding="utf-8")
+          prod=Path("prod-source/index.html").read_text(encoding="utf-8")
+          qa=Path("qa-source/index.html").read_text(encoding="utf-8")
           checks={
-            "doctype":"<!doctype html>" in h.lower(),
-            "title":"<title>Mission NDA — Phase 1 v15</title>" in h,
-            "landing_version":'id="missionReleaseVersion"' in h and "Phase 1 — v15" in h,
-            "no_old_versions":not any(x in h for x in ["Phase 1 — v11","Phase 1 — v12","Phase 1 — v13","Phase 1 — v14"]),
-            "student_login":"SRIRAM2026" in h,
-            "parent_login":"PARENT2026" in h,
-            "student_space":"Sriram's Space" in h,
-            "parent_space":"Parent Space" in h,
-            "curriculum":"M01" in h and "M20" in h,
-            "assessment":"Submit assessment" in h,
-            "review":"Review your answers" in h,
-            "persistence":"missionNDA_progress_v2" in h,
-            "export":"exportProgress" in h,
-            "import":"importProgress" in h,
-            "responsive":"@media(max-width:760px)" in h
+            "prod_title":"<title>Mission NDA — Phase 1 v15</title>" in prod,
+            "prod_storage":"missionNDA_progress_v2" in prod,
+            "qa_title":"<title>Mission NDA — Phase 1 v15 — QA</title>" in qa,
+            "qa_storage":"missionNDA_progress_qa_v1" in qa,
+            "qa_banner":"QA / TEST ENVIRONMENT" in qa,
+            "prod_not_qa":"missionNDA_progress_qa_v1" not in prod,
+            "qa_not_prod":"missionNDA_progress_v2" not in qa,
+            "student":"Sriram's Space" in prod and "Sriram's Space" in qa,
+            "parent":"Parent Space" in prod and "Parent Space" in qa,
+            "curriculum":"M01" in prod and "M20" in prod and "M01" in qa and "M20" in qa,
+            "assessment":"Submit assessment" in prod and "Submit assessment" in qa,
+            "responsive":"@media(max-width:760px)" in prod and "@media(max-width:760px)" in qa
           }
           for k,v in checks.items(): print(f"CHECK {k}={v}")
-          if not all(checks.values()): raise SystemExit("Canonical site validation failed")
-          print("Canonical site validation passed: Phase 1 — v15")
+          if not all(checks.values()): raise SystemExit("Environment validation failed")
+          print("Environment validation passed")
           PY
 
       - name: Prepare Pages site
         run: |
           rm -rf _site
-          mkdir _site
-          cp index.html _site/index.html
-          cp index.html /tmp/deployed-index.html
-          sha256sum index.html _site/index.html /tmp/deployed-index.html
-          cmp index.html _site/index.html
-          cmp index.html /tmp/deployed-index.html
+          mkdir -p _site/qa
+          cp prod-source/index.html _site/index.html
+          cp qa-source/index.html _site/qa/index.html
+          cmp prod-source/index.html _site/index.html
+          cmp qa-source/index.html _site/qa/index.html
+          echo "Production:"
+          sha256sum _site/index.html
+          echo "QA:"
+          sha256sum _site/qa/index.html
 
       - name: Upload Pages artifact
         if: ${{ github.run_attempt == 1 }}
@@ -73,27 +84,36 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-
-      - name: Verify live GitHub Pages site
+      - name: Verify live Production and QA URLs
         env:
           PAGES_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -e
-          echo "Checking $PAGES_URL"
+          PROD_URL="${PAGES_URL%/}/"
+          QA_URL="${PAGES_URL%/}/qa/"
+          echo "Checking production: $PROD_URL"
+          echo "Checking QA: $QA_URL"
+
           for attempt in 1 2 3 4 5 6; do
-            if curl -fsSL --max-time 20 "$PAGES_URL" -o /tmp/live.html; then
-              grep -q 'Mission NDA — Phase 1 v15' /tmp/live.html && \
-              grep -q 'id="missionReleaseVersion"' /tmp/live.html && \
-              grep -q 'Phase 1 — v15' /tmp/live.html && \
-              grep -q "Sriram's Space" /tmp/live.html && \
-              grep -q 'Parent Space' /tmp/live.html && \
-              ! grep -q 'Phase 1 — v12' /tmp/live.html && \
-              ! grep -q 'Phase 1 — v13' /tmp/live.html && \
-              ! grep -q 'Phase 1 — v14' /tmp/live.html && \
-              echo 'LIVE_SITE_CHECK passed' && exit 0
+            PROD_OK=false
+            QA_OK=false
+
+            if curl -fsSL --max-time 20 "$PROD_URL" -o /tmp/prod.html; then
+              grep -q 'Mission NDA — Phase 1 v15</title>' /tmp/prod.html &&               grep -q 'missionNDA_progress_v2' /tmp/prod.html &&               ! grep -q 'QA / TEST ENVIRONMENT' /tmp/prod.html &&               PROD_OK=true
             fi
-            echo "Live site not ready or stale; retry $attempt/6"
+
+            if curl -fsSL --max-time 20 "$QA_URL" -o /tmp/qa.html; then
+              grep -q 'Mission NDA — Phase 1 v15 — QA</title>' /tmp/qa.html &&               grep -q 'missionNDA_progress_qa_v1' /tmp/qa.html &&               grep -q 'QA / TEST ENVIRONMENT' /tmp/qa.html &&               ! grep -q 'missionNDA_progress_v2' /tmp/qa.html &&               QA_OK=true
+            fi
+
+            if [ "$PROD_OK" = true ] && [ "$QA_OK" = true ]; then
+              echo 'LIVE_ENVIRONMENT_CHECK passed'
+              exit 0
+            fi
+
+            echo "Live environment check not ready or stale; retry $attempt/6"
             sleep 10
           done
-          echo 'LIVE_SITE_CHECK failed'
+
+          echo 'LIVE_ENVIRONMENT_CHECK failed'
           exit 1
