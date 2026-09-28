@@ -2,23 +2,7 @@ from pathlib import Path
 p=Path("_site/index.html")
 html=p.read_text(encoding="utf-8")
 html=html.replace("Phase 1 — v13","Phase 1 — v14")
-old_handler="""   btn.onclick=()=>{
-    let score=0,answered=0;
-    assessments[id].forEach((q,i)=>{let x=form.querySelector(`input[name="${id}${i}"]:checked`);if(x){answered++;if(+x.value===q.a)score++;}});
-    if(answered<assessments[id].length){alert("Please answer every question.");return;}
-    let pct=Math.round(score/assessments[id].length*100);
-    let status=pct>=90?"Mastered":pct>=75?"Developing":"Needs Practice";
-    let r=document.createElement("div");r.className="result";let advice=pct>=90?"Mastery signal — keep it active with spaced revision.":pct>=75?"Developing — practise missed question types, then reassess.":"Needs practice — revisit the lesson, practise slowly, then reassess.";
-    r.innerHTML=`<strong>Score: ${score}/${assessments[id].length} (${pct}%)</strong><br>Status: ${status}<br><span class="small">${advice}</span>`;
-    box.appendChild(r);localStorage.setItem("score_"+id,pct);
-    const history=getHistory(id);
-    history.push({ts:Date.now(),score,pct,total:assessments[id].length});
-    saveHistory(id,history);
-    localStorage.setItem("attempt_"+id,Date.now());
-    updateStats(); renderHistory();
-   };
-"""
-new_handler="""   btn.onclick=()=>{
+review_handler="""   btn.onclick=()=>{
     let score=0,answered=0;
     const responses=[];
     assessments[id].forEach((q,i)=>{let x=form.querySelector(`input[name="${id}${i}"]:checked`);if(x){answered++;const chosen=+x.value;const correct=chosen===q.a;if(correct)score++;responses.push({i,chosen,correct});}});
@@ -36,8 +20,10 @@ new_handler="""   btn.onclick=()=>{
     btn.disabled=true;btn.textContent="Assessment reviewed";
    };
 """
-if old_handler not in html: raise SystemExit("assessment handler target not found")
-html=html.replace(old_handler,new_handler,1)
+import re
+m=re.search(r'btn\.onclick=\(\)=>\{.*?\n\s*\};\n',html,re.S)
+if not m: raise SystemExit("assessment handler target not found")
+html=html[:m.start()]+review_handler+html[m.end():]
 helpers="""const whyByTopic={
  M01:"Look at the place or number pattern carefully before choosing. In number sense, each digit has a value based on its position.",
  M02:"Calculate using place value, then estimate or check whether the result is reasonable.",
