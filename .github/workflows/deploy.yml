@@ -1,4 +1,4 @@
-name: Deploy Mission NDA — Phase 1 v13
+name: Deploy Mission NDA — Phase 1 v14
 
 on:
   push:
@@ -87,11 +87,11 @@ jobs:
           html = p.read_text(encoding="utf-8")
           def fix_password_tag(m):
               tag = m.group(0)
-              if not re.search(r'\\btype\\s*=\\s*["\\']password["\\']', tag, re.I):
+              if not re.search(r"""\\btype\\s*=\\s*["']password["']""", tag, re.I):
                   return tag
-              tag = re.sub(r'\\s+inputmode\\s*=\\s*["\\'][^"\\']*["\\']', '', tag, flags=re.I)
-              tag = re.sub(r'\\s+pattern\\s*=\\s*["\\'][^"\\']*["\\']', '', tag, flags=re.I)
-              tag = re.sub(r'\\s+autocomplete\\s*=\\s*["\\'][^"\\']*["\\']', '', tag, flags=re.I)
+              tag = re.sub(r"""\\s+inputmode\\s*=\\s*["'][^"']*["']""", '', tag, flags=re.I)
+              tag = re.sub(r"""\\s+pattern\\s*=\\s*["'][^"']*["']""", '', tag, flags=re.I)
+              tag = re.sub(r"""\\s+autocomplete\\s*=\\s*["'][^"']*["']""", '', tag, flags=re.I)
               return tag[:-1] + ' inputmode="text" autocomplete="current-password">'
           html = re.sub(r'<input\\b[^>]*>', fix_password_tag, html, flags=re.I)
 
@@ -116,9 +116,15 @@ jobs:
           p.write_text(html, encoding="utf-8")
           PY
           test -s _site/index.html
+          grep -q "Phase 1 — v14" _site/index.html
           ! grep -q "Phase 1 — v11" _site/index.html
+          ! grep -q "Phase 1 — v12" _site/index.html
+          ! grep -q "Phase 1 — v13" _site/index.html
+          grep -q "Review your answers" _site/index.html
+          grep -q "missionNDA_progress_v1" _site/index.html
           grep -q "Mission NDA" _site/index.html
           grep -q "Sriram" _site/index.html
+          echo "Release gate passed: Phase 1 — v14"
 
       - name: Upload Pages artifact
         if: ${{ github.run_attempt == 1 }}
