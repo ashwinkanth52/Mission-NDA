@@ -1,4 +1,4 @@
-name: Deploy Mission NDA — Phase 1 v15
+name: Deploy Mission NDA — Phase 1 v16
 
 on:
   push:
@@ -34,9 +34,9 @@ jobs:
           prod=Path("index.html").read_text(encoding="utf-8")
           qa=Path("qa/index.html").read_text(encoding="utf-8")
           checks={
-            "prod_title":"<title>Mission NDA — Phase 1 v15</title>" in prod,
+            "prod_title":"<title>Mission NDA — Phase 1 v16</title>" in prod,
             "prod_storage":"missionNDA_progress_v2" in prod,
-            "qa_title":"<title>Mission NDA — Phase 1 v15 — QA</title>" in qa,
+            "qa_title":"<title>Mission NDA — Phase 1 v16 — QA</title>" in qa,
             "qa_storage":"missionNDA_progress_qa_v1" in qa,
             "qa_banner":"QA / TEST ENVIRONMENT" in qa,
             "prod_not_qa":"missionNDA_progress_qa_v1" not in prod,
@@ -45,7 +45,8 @@ jobs:
             "parent":"Parent Space" in prod and "Parent Space" in qa,
             "curriculum":"M01" in prod and "M20" in prod and "M01" in qa and "M20" in qa,
             "assessment":"Submit assessment" in prod and "Submit assessment" in qa,
-            "responsive":"@media(max-width:760px)" in prod and "@media(max-width:760px)" in qa
+            "responsive":"@media(max-width:760px)" in prod and "@media(max-width:760px)" in qa,
+            "stage_progress":"stageProgress(stage)" in prod and "stageProgress(stage)" in qa and "Foundation" in prod and "Foundation" in qa
           }
           for k,v in checks.items(): print(f"CHECK {k}={v}")
           if not all(checks.values()): raise SystemExit("Environment validation failed")
@@ -90,11 +91,11 @@ jobs:
             QA_OK=false
 
             if curl -fsSL --max-time 20 "$PROD_URL" -o /tmp/prod.html; then
-              grep -q 'Mission NDA — Phase 1 v15</title>' /tmp/prod.html &&               grep -q 'missionNDA_progress_v2' /tmp/prod.html &&               ! grep -q 'QA / TEST ENVIRONMENT' /tmp/prod.html &&               PROD_OK=true
+              grep -q 'Mission NDA — Phase 1 v16</title>' /tmp/prod.html &&               grep -q 'missionNDA_progress_v2' /tmp/prod.html &&               ! grep -q 'QA / TEST ENVIRONMENT' /tmp/prod.html &&               PROD_OK=true
             fi
 
             if curl -fsSL --max-time 20 "$QA_URL" -o /tmp/qa.html; then
-              grep -q 'Mission NDA — Phase 1 v15 — QA</title>' /tmp/qa.html &&               grep -q 'missionNDA_progress_qa_v1' /tmp/qa.html &&               grep -q 'QA / TEST ENVIRONMENT' /tmp/qa.html &&               ! grep -q 'missionNDA_progress_v2' /tmp/qa.html &&               QA_OK=true
+              grep -q 'Mission NDA — Phase 1 v16 — QA</title>' /tmp/qa.html &&               grep -q 'missionNDA_progress_qa_v1' /tmp/qa.html &&               grep -q 'QA / TEST ENVIRONMENT' /tmp/qa.html &&               ! grep -q 'missionNDA_progress_v2' /tmp/qa.html &&               QA_OK=true
             fi
 
             if [ "$PROD_OK" = true ] && [ "$QA_OK" = true ]; then
