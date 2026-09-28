@@ -101,7 +101,7 @@ jobs:
           html = html.replace(old_history, new_history)
 
           # Explicitly refresh Student Home after Student Mode is shown.
-          old_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v11":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v11";'
+          old_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v12":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v12";'
           new_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v12":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v12";\n  if(role==="student") setTimeout(()=>{try{applyStudentCurriculum();renderStudentHome();}catch(e){console.error("Student Home render failed",e);}},0);'
           html = html.replace(old_show, new_show)
 
