@@ -96,34 +96,13 @@ jobs:
           html = re.sub(r'<input\\b[^>]*>', fix_password_tag, html, flags=re.I)
 
           # Student Home hardening: stale/invalid browser history must never blank the mission.
-          old_history='const STORAGE_KEY="missionNDA_progress_v1";
-function readProgress(){try{const raw=localStorage.getItem(STORAGE_KEY);const data=raw?JSON.parse(raw):{};return data&&typeof data==="object"?data:{};}catch(e){return {};}}
-function writeProgress(data){localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}
-function getHistory(id){
- const p=readProgress();
- if(Array.isArray(p.history?.[id])) return p.history[id];
- try{const legacy=JSON.parse(localStorage.getItem("history_"+id)||"[]");if(Array.isArray(legacy)&&legacy.length){p.history=p.history||{};p.history[id]=legacy;p.version=1;writeProgress(p);return legacy;}}catch(e){}
- return [];
-}
-function saveHistory(id,history){
- const p=readProgress();p.version=1;p.updatedAt=Date.now();p.history=p.history||{};p.history[id]=history;
- localStorage.setItem("history_"+id,JSON.stringify(history));writeProgress(p);
-}
-function exportProgress(){
- const payload={schema:"mission-nda-progress",version:1,exportedAt:new Date().toISOString(),student:"Sriram Tanaji",history:{}};
- Object.values(data).flat().forEach(t=>{const h=getHistory(t[0]);if(h.length)payload.history[t[0]]=h;});
- const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="sriram-mission-nda-progress.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-}
-function importProgress(file){
- if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const x=JSON.parse(reader.result);if(x?.schema!=="mission-nda-progress"||x.version!==1||!x.history||typeof x.history!=="object")throw new Error("Invalid");const p=readProgress();p.version=1;p.updatedAt=Date.now();p.history=p.history||{};Object.entries(x.history).forEach(([id,h])=>{if(Array.isArray(h)&&Object.values(data).flat().some(t=>t[0]===id)){p.history[id]=h;localStorage.setItem("history_"+id,JSON.stringify(h));}});writeProgress(p);updateStats();renderHistory();alert("Progress imported successfully.");}catch(e){alert("This progress file could not be imported. Existing progress was not changed.");}};reader.readAsText(file);
-}
-function openImport(){document.getElementById("progressImport").click();}'
-          new_history='function getHistory(id){try{const raw=localStorage.getItem("history_"+id);const parsed=raw?JSON.parse(raw):[];return Array.isArray(parsed)?parsed:[];}catch(e){console.warn("Ignoring invalid history for "+id);return [];}}'
+          old_history='function getHistory(id){return JSON.parse(localStorage.getItem("history_"+id)||"[]");}'
+          new_history='const STORAGE_KEY="missionNDA_progress_v1";\nfunction readProgress(){try{const raw=localStorage.getItem(STORAGE_KEY);const data=raw?JSON.parse(raw):{};return data&&typeof data==="object"?data:{};}catch(e){return {};}}\nfunction writeProgress(data){localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}\nfunction getHistory(id){\n const p=readProgress();\n if(Array.isArray(p.history?.[id])) return p.history[id];\n try{const legacy=JSON.parse(localStorage.getItem("history_"+id)||"[]");if(Array.isArray(legacy)&&legacy.length){p.history=p.history||{};p.history[id]=legacy;p.version=1;writeProgress(p);return legacy;}}catch(e){}\n return [];\n}\nfunction saveHistory(id,history){\n const p=readProgress();p.version=1;p.updatedAt=Date.now();p.history=p.history||{};p.history[id]=history;\n localStorage.setItem("history_"+id,JSON.stringify(history));writeProgress(p);\n}\nfunction exportProgress(){\n const payload={schema:"mission-nda-progress",version:1,exportedAt:new Date().toISOString(),student:"Sriram Tanaji",history:{}};\n Object.values(data).flat().forEach(t=>{const h=getHistory(t[0]);if(h.length)payload.history[t[0]]=h;});\n const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="sriram-mission-nda-progress.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);\n}\nfunction importProgress(file){\n if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const x=JSON.parse(reader.result);if(x?.schema!=="mission-nda-progress"||x.version!==1||!x.history||typeof x.history!=="object")throw new Error("Invalid");const p=readProgress();p.version=1;p.updatedAt=Date.now();p.history=p.history||{};Object.entries(x.history).forEach(([id,h])=>{if(Array.isArray(h)&&Object.values(data).flat().some(t=>t[0]===id)){p.history[id]=h;localStorage.setItem("history_"+id,JSON.stringify(h));}});writeProgress(p);updateStats();renderHistory();alert("Progress imported successfully.");}catch(e){alert("This progress file could not be imported. Existing progress was not changed.");}};reader.readAsText(file);\n}\nfunction openImport(){document.getElementById("progressImport").click();}'
           html = html.replace(old_history, new_history)
 
           # Explicitly refresh Student Home after Student Mode is shown.
-          old_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v13":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v12";'
-          new_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v12":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v12";\n  if(role==="student") setTimeout(()=>{try{applyStudentCurriculum();renderStudentHome();}catch(e){console.error("Student Home render failed",e);}},0);'
+          old_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v12":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v12";'
+          new_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v13":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v13";\n  if(role==="student") setTimeout(()=>{try{applyStudentCurriculum();renderStudentHome();}catch(e){console.error("Student Home render failed",e);}},0);'
           html = html.replace(old_show, new_show)
 
           # Never leave Today's Mission visually empty; M01 is the permanent Grade 3 foundation fallback.
