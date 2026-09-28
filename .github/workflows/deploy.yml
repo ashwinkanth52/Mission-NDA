@@ -81,6 +81,7 @@ jobs:
           grep -q "Sriram" _site/index.html
 
       - name: Upload Pages artifact
+        if: ${{ github.run_attempt == 1 }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
