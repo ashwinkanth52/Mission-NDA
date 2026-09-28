@@ -94,6 +94,21 @@ jobs:
               tag = re.sub(r'\\s+autocomplete\\s*=\\s*["\\'][^"\\']*["\\']', '', tag, flags=re.I)
               return tag[:-1] + ' inputmode="text" autocomplete="current-password">'
           html = re.sub(r'<input\\b[^>]*>', fix_password_tag, html, flags=re.I)
+
+          # Student Home hardening: stale/invalid browser history must never blank the mission.
+          old_history='function getHistory(id){return JSON.parse(localStorage.getItem("history_"+id)||"[]");}'
+          new_history='function getHistory(id){try{const raw=localStorage.getItem("history_"+id);const parsed=raw?JSON.parse(raw):[];return Array.isArray(parsed)?parsed:[];}catch(e){console.warn("Ignoring invalid history for "+id);return [];}}'
+          html = html.replace(old_history, new_history)
+
+          # Explicitly refresh Student Home after Student Mode is shown.
+          old_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v11":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v11";'
+          new_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v12":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v12";\n  if(role==="student") setTimeout(()=>{try{applyStudentCurriculum();renderStudentHome();}catch(e){console.error("Student Home render failed",e);}},0);'
+          html = html.replace(old_show, new_show)
+
+          # Never leave Today's Mission visually empty; M01 is the permanent Grade 3 foundation fallback.
+          old_empty='  if(!unique.length) box.innerHTML=\'<div class="mission-item">🌟 Great work. Your next challenge will appear when you are ready.</div>\';'
+          new_empty='  if(!unique.length){const fallback=Object.values(data).flat().find(x=>x[0]==="M01");if(fallback){const item=document.createElement("div");item.className="mission-item";item.innerHTML="<strong>"+fallback[1]+"</strong> <span class=\"status-pill status-practice\">Ready</span><br><span class=\"small\">Start here: learn and practise this with a parent or teacher.</span>";box.appendChild(item);}else{box.innerHTML=\'<div class="mission-item">🌟 Your next challenge will appear when you are ready.</div>\';}}'
+          html = html.replace(old_empty, new_empty)
           p.write_text(html, encoding="utf-8")
           PY
           test -s _site/index.html
