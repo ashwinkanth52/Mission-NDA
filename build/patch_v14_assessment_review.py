@@ -61,7 +61,7 @@ function nextStep(id){
 if "const whyByTopic=" not in html:
     marker='let active="Mathematics";'
     if marker not in html: raise SystemExit("helper insertion point not found")
-    html=html.replace(marker,helpers+marker,1)
+    html=html.replace(marker,helpers+'const MISSION_NDA_PROGRESS_SCHEMA="missionNDA_progress_v1";\\n'+marker,1)
 css=".answer-review{margin-top:10px}.review-item{padding:10px 0;border-top:1px solid #e5e7eb}.review-correct{border-left:4px solid #6b8e6b;padding-left:10px}.review-learning{border-left:4px solid #c28a4a;padding-left:10px}.review-explain{margin-top:7px;font-size:.93rem;line-height:1.5}.result hr{border:0;border-top:1px solid #ddd;margin:14px 0}.result button{margin-top:8px}"
 if ".answer-review{" not in html: html=html.replace("</style>",css+"</style>",1)
 p.write_text(html,encoding="utf-8")
