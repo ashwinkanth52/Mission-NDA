@@ -2,7 +2,7 @@ name: Deploy Mission NDA — Phase 1 v15
 
 on:
   push:
-    branches: ["main", "qa"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -21,27 +21,18 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout Production
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: main
-          path: prod-source
-
-      - name: Checkout QA
-        uses: actions/checkout@v4
-        with:
-          ref: qa
-          path: qa-source
 
       - name: Validate production and QA sites
         run: |
           set -e
-          test -s prod-source/index.html
-          test -s qa-source/index.html
+          test -s index.html
+          test -s qa/index.html
           python3 - <<'PY'
           from pathlib import Path
-          prod=Path("prod-source/index.html").read_text(encoding="utf-8")
-          qa=Path("qa-source/index.html").read_text(encoding="utf-8")
+          prod=Path("index.html").read_text(encoding="utf-8")
+          qa=Path("qa/index.html").read_text(encoding="utf-8")
           checks={
             "prod_title":"<title>Mission NDA — Phase 1 v15</title>" in prod,
             "prod_storage":"missionNDA_progress_v2" in prod,
@@ -65,10 +56,10 @@ jobs:
         run: |
           rm -rf _site
           mkdir -p _site/qa
-          cp prod-source/index.html _site/index.html
-          cp qa-source/index.html _site/qa/index.html
-          cmp prod-source/index.html _site/index.html
-          cmp qa-source/index.html _site/qa/index.html
+          cp index.html _site/index.html
+          cp qa/index.html _site/qa/index.html
+          cmp index.html _site/index.html
+          cmp qa/index.html _site/qa/index.html
           echo "Production:"
           sha256sum _site/index.html
           echo "QA:"
