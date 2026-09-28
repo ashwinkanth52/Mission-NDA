@@ -121,22 +121,25 @@ jobs:
           # Final release normalization. No earlier patch is allowed to reintroduce an old label.
           sed -i -e 's/Phase 1 — v11/Phase 1 — v14/g' -e 's/Phase 1 — v12/Phase 1 — v14/g' -e 's/Phase 1 — v13/Phase 1 — v14/g' _site/index.html
           test -s _site/index.html
-          grep -q "Phase 1 — v14" _site/index.html
-          ! grep -q "Phase 1 — v11" _site/index.html
-          ! grep -q "Phase 1 — v12" _site/index.html
-          ! grep -q "Phase 1 — v13" _site/index.html
-          grep -q "Review your answers" _site/index.html
-          grep -q "missionNDA_progress_v1" _site/index.html
-          grep -q "Mission NDA" _site/index.html
-          grep -q "Sriram" _site/index.html
-          echo "Release gate inspection:"
-          echo -n "v14="; grep -c "Phase 1 — v14" _site/index.html || true
-          echo -n "v11="; grep -c "Phase 1 — v11" _site/index.html || true
-          echo -n "v12="; grep -c "Phase 1 — v12" _site/index.html || true
-          echo -n "v13="; grep -c "Phase 1 — v13" _site/index.html || true
-          echo -n "review="; grep -c "Review your answers" _site/index.html || true
-          echo -n "progress="; grep -c "missionNDA_progress_v1" _site/index.html || true
-          echo "Release gate passed: Phase 1 — v14"
+          python3 - <<'PY'
+          from pathlib import Path
+          h=Path("_site/index.html").read_text(encoding="utf-8")
+          checks={
+            "v14": "Phase 1 — v14" in h,
+            "no_v11": "Phase 1 — v11" not in h,
+            "no_v12": "Phase 1 — v12" not in h,
+            "no_v13": "Phase 1 — v13" not in h,
+            "review": "Review your answers" in h,
+            "progress": "missionNDA_progress_v1" in h,
+            "mission": "Mission NDA" in h,
+            "sriram": "Sriram" in h,
+          }
+          for k,v in checks.items(): print(f"RELEASE_CHECK {k}={v}")
+          if not all(checks.values()):
+              raise SystemExit("Release gate failed")
+          print("Release gate passed: Phase 1 — v14")
+          PY
+
 
       - name: Upload Pages artifact
         if: ${{ github.run_attempt == 1 }}
