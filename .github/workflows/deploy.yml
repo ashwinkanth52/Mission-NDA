@@ -78,7 +78,7 @@ jobs:
           gzip -dc /tmp/mission-nda-v12.gz > _site/index.html
           # The approved v12 artifact contains the prior internal version label in its UI.
           # Normalize the visible release label at build time.
-          sed -i 's/Phase 1 — v11/Phase 1 — v13/g' _site/index.html
+          sed -i -e 's/Phase 1 — v11/Phase 1 — v14/g' -e 's/Phase 1 — v12/Phase 1 — v14/g' -e 's/Phase 1 — v13/Phase 1 — v14/g' _site/index.html
           # Mobile fix: password fields must use a text/password keyboard.
           python3 - <<'PY'
           import re
