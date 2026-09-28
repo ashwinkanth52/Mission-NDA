@@ -115,6 +115,8 @@ jobs:
           html = html.replace(old_history_panel, new_history_panel)
           p.write_text(html, encoding="utf-8")
           PY
+          # Final release normalization. No earlier patch is allowed to reintroduce an old label.
+          sed -i -e 's/Phase 1 — v11/Phase 1 — v14/g' -e 's/Phase 1 — v12/Phase 1 — v14/g' -e 's/Phase 1 — v13/Phase 1 — v14/g' _site/index.html
           test -s _site/index.html
           grep -q "Phase 1 — v14" _site/index.html
           ! grep -q "Phase 1 — v11" _site/index.html
