@@ -1,4 +1,4 @@
-name: Deploy Mission NDA — Phase 1 v14
+name: Deploy Mission NDA — Phase 1 v15
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
 
 jobs:
@@ -20,143 +20,48 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Repair known payload transcription errors
+      - name: Validate canonical site
         run: |
-          python3 - <<'PY'
-          import hashlib
-          from pathlib import Path
-
-          targets = {
-            "04.b64": "f2d325aa9aa8c05c7698d92991edc59e274ed6f1",
-            "09.b64": "75a9e4222f05767584b537d10890928522cd97c1",
-          }
-          chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
-
-          def blob_sha(x):
-              return hashlib.sha1(("blob "+str(len(x))+"\0"+x).encode()).hexdigest()
-
-          for name,target in targets.items():
-              p=Path("build/payload")/name
-              s=p.read_text()
-              if blob_sha(s)==target:
-                  continue
-              found=None
-              if name=="09.b64":
-                  for i in range(len(s)+1):
-                      for ch in chars:
-                          c=s[:i]+ch+s[i:]
-                          if blob_sha(c)==target:
-                              found=c; break
-                      if found: break
-              else:
-                  for i in range(len(s)):
-                      old=s[i]
-                      for ch in chars:
-                          if ch==old: continue
-                          c=s[:i]+ch+s[i+1:]
-                          if blob_sha(c)==target:
-                              found=c; break
-                      if found: break
-              if not found:
-                  raise SystemExit("Could not repair "+name)
-              p.write_text(found)
-              print("Repaired",name)
-
-          print("Payload repair complete")
-          PY
-
-      - name: Rebuild approved Phase 1 v14 site
-        run: |
-          mkdir -p _site
-          cat build/payload/*.b64 | tr -d '\n' | base64 -d > /tmp/mission-nda-v12.gz
-          gzip -t /tmp/mission-nda-v12.gz
-          gzip -dc /tmp/mission-nda-v12.gz > _site/index.html
-          # The approved v12 artifact contains the prior internal version label in its UI.
-          # Normalize the visible release label at build time.
-          sed -i -e 's/Phase 1 — v11/Phase 1 — v14/g' -e 's/Phase 1 — v12/Phase 1 — v14/g' -e 's/Phase 1 — v13/Phase 1 — v14/g' _site/index.html
-          # Mobile fix: password fields must use a text/password keyboard.
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-          p = Path("_site/index.html")
-          html = p.read_text(encoding="utf-8")
-          def fix_password_tag(m):
-              tag = m.group(0)
-              if not re.search(r"""\\btype\\s*=\\s*["']password["']""", tag, re.I):
-                  return tag
-              tag = re.sub(r"""\\s+inputmode\\s*=\\s*["'][^"']*["']""", '', tag, flags=re.I)
-              tag = re.sub(r"""\\s+pattern\\s*=\\s*["'][^"']*["']""", '', tag, flags=re.I)
-              tag = re.sub(r"""\\s+autocomplete\\s*=\\s*["'][^"']*["']""", '', tag, flags=re.I)
-              return tag[:-1] + ' inputmode="text" autocomplete="current-password">'
-          html = re.sub(r'<input\\b[^>]*>', fix_password_tag, html, flags=re.I)
-
-          # Student Home hardening: stale/invalid browser history must never blank the mission.
-          old_history='function getHistory(id){return JSON.parse(localStorage.getItem("history_"+id)||"[]");}'
-          new_history='const STORAGE_KEY="missionNDA_progress_v1";\nfunction readProgress(){try{const raw=localStorage.getItem(STORAGE_KEY);const data=raw?JSON.parse(raw):{};return data&&typeof data==="object"?data:{};}catch(e){return {};}}\nfunction writeProgress(data){localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}\nfunction getHistory(id){\n const p=readProgress();\n if(Array.isArray(p.history?.[id])) return p.history[id];\n try{const legacy=JSON.parse(localStorage.getItem("history_"+id)||"[]");if(Array.isArray(legacy)&&legacy.length){p.history=p.history||{};p.history[id]=legacy;p.version=1;writeProgress(p);return legacy;}}catch(e){}\n return [];\n}\nfunction saveHistory(id,history){\n const p=readProgress();p.version=1;p.updatedAt=Date.now();p.history=p.history||{};p.history[id]=history;\n localStorage.setItem("history_"+id,JSON.stringify(history));writeProgress(p);\n}\nfunction exportProgress(){\n const payload={schema:"mission-nda-progress",version:1,exportedAt:new Date().toISOString(),student:"Sriram Tanaji",history:{}};\n Object.values(data).flat().forEach(t=>{const h=getHistory(t[0]);if(h.length)payload.history[t[0]]=h;});\n const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="sriram-mission-nda-progress.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);\n}\nfunction importProgress(file){\n if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const x=JSON.parse(reader.result);if(x?.schema!=="mission-nda-progress"||x.version!==1||!x.history||typeof x.history!=="object")throw new Error("Invalid");const p=readProgress();p.version=1;p.updatedAt=Date.now();p.history=p.history||{};Object.entries(x.history).forEach(([id,h])=>{if(Array.isArray(h)&&Object.values(data).flat().some(t=>t[0]===id)){p.history[id]=h;localStorage.setItem("history_"+id,JSON.stringify(h));}});writeProgress(p);updateStats();renderHistory();alert("Progress imported successfully.");}catch(e){alert("This progress file could not be imported. Existing progress was not changed.");}};reader.readAsText(file);\n}\nfunction openImport(){document.getElementById("progressImport").click();}'
-          html = html.replace(old_history, new_history)
-
-          # Explicitly refresh Student Home after Student Mode is shown.
-          old_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v12":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v12";'
-          new_show='  if(sub) sub.textContent=role==="student"?"Your learning journey • Phase 1 — v13":"Parent dashboard • Curriculum + assessment + progress • Phase 1 — v13";\n  if(role==="student") setTimeout(()=>{try{applyStudentCurriculum();renderStudentHome();}catch(e){console.error("Student Home render failed",e);}},0);'
-          html = html.replace(old_show, new_show)
-
-          # Never leave Today's Mission visually empty; M01 is the permanent Grade 3 foundation fallback.
-          old_empty='  if(!unique.length) box.innerHTML=\'<div class="mission-item">🌟 Great work. Your next challenge will appear when you are ready.</div>\';'
-          new_empty='  if(!unique.length){const fallback=Object.values(data).flat().find(x=>x[0]==="M01");if(fallback){const item=document.createElement("div");item.className="mission-item";item.innerHTML="<strong>"+fallback[1]+"</strong> <span class=\"status-pill status-practice\">Ready</span><br><span class=\"small\">Start here: learn and practise this with a parent or teacher.</span>";box.appendChild(item);}else{box.innerHTML=\'<div class="mission-item">🌟 Your next challenge will appear when you are ready.</div>\';}}'
-          html = html.replace(old_empty, new_empty)
-          # Apply the v14 assessment review layer inside this Python build context.
-          exec(Path("build/patch_v14_assessment_review.py").read_text(encoding="utf-8"), globals())
-
-          # Parent controls for moving progress between devices.
-          old_history_panel='<div id="historySummary" class="grid"></div>\n<div id="historyTableWrap"></div>'
-          new_history_panel='<div id="historySummary" class="grid"></div>\n<div class="small muted" style="margin-top:12px">Progress is stored on this browser. Export/import lets you carry Sriram\'s learning record to another device.</div>\n<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px">\n<button type="button" onclick="exportProgress()">Export progress</button>\n<button type="button" onclick="openImport()">Import progress</button>\n<input id="progressImport" type="file" accept="application/json" style="display:none" onchange="importProgress(this.files[0]);this.value=\'\'">\n</div>\n<div id="historyTableWrap"></div>'
-          html = html.replace(old_history_panel, new_history_panel)
-          p.write_text(html, encoding="utf-8")
-          PY
-          # Final release normalization. No earlier patch is allowed to reintroduce an old label.
-          sed -i -e 's/Phase 1 — v11/Phase 1 — v14/g' -e 's/Phase 1 — v12/Phase 1 — v14/g' -e 's/Phase 1 — v13/Phase 1 — v14/g' _site/index.html
-          test -s _site/index.html
+          test -s index.html
           python3 - <<'PY'
           from pathlib import Path
           import re
-          p=Path("_site/index.html")
-          h=p.read_text(encoding="utf-8")
-          # Version is a release detail for the landing screen only.
-          h=re.sub(r'<title>.*?</title>', '<title>Mission NDA — Phase 1 v14</title>', h, count=1, flags=re.S|re.I)
-          if 'id="missionReleaseVersion"' not in h:
-              h=h.replace('<h1>Welcome</h1>', '<h1>Welcome</h1><div id="missionReleaseVersion" class="small muted" style="margin:-2px 0 14px;font-weight:700">Phase 1 — v14</div>', 1)
-          h=re.sub(r'(<div class="sub">).*?(</div>)', r'\1Grade 3 • Foundation phase • Modular curriculum + assessment system\2', h, count=1, flags=re.S|re.I)
-          h=h.replace('Phase 1 — v11','Phase 1 — v14').replace('Phase 1 — v12','Phase 1 — v14').replace('Phase 1 — v13','Phase 1 — v14')
-          p.write_text(h,encoding="utf-8")
-          PY
-          python3 - <<'PY'
-          from pathlib import Path
-          h=Path("_site/index.html").read_text(encoding="utf-8")
-          h=Path("_site/index.html").read_text(encoding="utf-8")
+          h=Path("index.html").read_text(encoding="utf-8")
           checks={
-            "v14": "Phase 1 — v14" in h,
-            "no_v11": "Phase 1 — v11" not in h,
-            "no_v12": "Phase 1 — v12" not in h,
-            "no_v13": "Phase 1 — v13" not in h,
-            "landing_version": 'id="missionReleaseVersion"' in h,
-            "landing_has_v14": 'id="missionReleaseVersion"' in h and "Phase 1 — v14" in h[h.find('id="missionReleaseVersion"'):h.find('id="missionReleaseVersion"')+300],
-            "header_has_no_version": "Phase 1 — v" not in h[h.find("<header"):h.find("</header>")],
-            "review": "Review your answers" in h,
-            "progress": "missionNDA_progress_v1" in h,
-            "mission": "Mission NDA" in h,
-            "sriram": "Sriram" in h,
+            "doctype":"<!doctype html>" in h.lower(),
+            "title":"<title>Mission NDA — Phase 1 v15</title>" in h,
+            "landing_version":'id="missionReleaseVersion"' in h and "Phase 1 — v15" in h,
+            "no_old_versions":not any(x in h for x in ["Phase 1 — v11","Phase 1 — v12","Phase 1 — v13","Phase 1 — v14"]),
+            "student_login":"SRIRAM2026" in h,
+            "parent_login":"PARENT2026" in h,
+            "student_space":"Sriram's Space" in h,
+            "parent_space":"Parent Space" in h,
+            "curriculum":"M01" in h and "M20" in h,
+            "assessment":"Submit assessment" in h,
+            "review":"Review your answers" in h,
+            "persistence":"missionNDA_progress_v2" in h,
+            "export":"exportProgress" in h,
+            "import":"importProgress" in h,
+            "responsive":"@media(max-width:760px)" in h
           }
-          for k,v in checks.items(): print(f"RELEASE_CHECK {k}={v}")
-          if not all(checks.values()):
-              raise SystemExit("Release gate failed")
-          print("Release gate passed: Phase 1 — v14")
+          for k,v in checks.items(): print(f"CHECK {k}={v}")
+          if not all(checks.values()): raise SystemExit("Canonical site validation failed")
+          print("Canonical site validation passed: Phase 1 — v15")
           PY
 
+      - name: Prepare Pages site
+        run: |
+          rm -rf _site
+          mkdir _site
+          cp index.html _site/index.html
+          cp index.html /tmp/deployed-index.html
+          sha256sum index.html _site/index.html /tmp/deployed-index.html
+          cmp index.html _site/index.html
+          cmp index.html /tmp/deployed-index.html
 
       - name: Upload Pages artifact
         if: ${{ github.run_attempt == 1 }}
