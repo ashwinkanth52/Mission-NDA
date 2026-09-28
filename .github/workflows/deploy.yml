@@ -72,3 +72,28 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+
+      - name: Verify live GitHub Pages site
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -e
+          echo "Checking $PAGES_URL"
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsSL --max-time 20 "$PAGES_URL" -o /tmp/live.html; then
+              grep -q 'Mission NDA — Phase 1 v15' /tmp/live.html && \
+              grep -q 'id="missionReleaseVersion"' /tmp/live.html && \
+              grep -q 'Phase 1 — v15' /tmp/live.html && \
+              grep -q "Sriram's Space" /tmp/live.html && \
+              grep -q 'Parent Space' /tmp/live.html && \
+              ! grep -q 'Phase 1 — v12' /tmp/live.html && \
+              ! grep -q 'Phase 1 — v13' /tmp/live.html && \
+              ! grep -q 'Phase 1 — v14' /tmp/live.html && \
+              echo 'LIVE_SITE_CHECK passed' && exit 0
+            fi
+            echo "Live site not ready or stale; retry $attempt/6"
+            sleep 10
+          done
+          echo 'LIVE_SITE_CHECK failed'
+          exit 1
