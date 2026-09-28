@@ -126,6 +126,13 @@ jobs:
           grep -q "missionNDA_progress_v1" _site/index.html
           grep -q "Mission NDA" _site/index.html
           grep -q "Sriram" _site/index.html
+          echo "Release gate inspection:"
+          echo -n "v14="; grep -c "Phase 1 — v14" _site/index.html || true
+          echo -n "v11="; grep -c "Phase 1 — v11" _site/index.html || true
+          echo -n "v12="; grep -c "Phase 1 — v12" _site/index.html || true
+          echo -n "v13="; grep -c "Phase 1 — v13" _site/index.html || true
+          echo -n "review="; grep -c "Review your answers" _site/index.html || true
+          echo -n "progress="; grep -c "missionNDA_progress_v1" _site/index.html || true
           echo "Release gate passed: Phase 1 — v14"
 
       - name: Upload Pages artifact
