@@ -25,10 +25,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Repair payload part 9 if needed
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          p=Path("build/payload/09.b64")
+          s=p.read_text()
+          target="75a9e4222f05767584b537d10890928522cd97c1"
+          def blob_sha(x):
+              return hashlib.sha1(("blob "+str(len(x))+"\0"+x).encode()).hexdigest()
+          if blob_sha(s) != target:
+              chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+              found=None
+              for i in range(len(s)+1):
+                  for ch in chars:
+                      candidate=s[:i]+ch+s[i:]
+                      if blob_sha(candidate)==target:
+                          found=candidate
+                          break
+                  if found: break
+              if not found:
+                  raise SystemExit("Could not repair payload part 9")
+              p.write_text(found)
+              print("Repaired payload part 9")
+          else:
+              print("Payload part 9 already correct")
+
       - name: Rebuild approved Phase 1 v12 site
         run: |
           mkdir -p _site
           cat build/payload/*.b64 | tr -d '\n' | base64 -d > /tmp/mission-nda-v12.gz
+          gzip -t /tmp/mission-nda-v12.gz
           gzip -dc /tmp/mission-nda-v12.gz > _site/index.html
           test -s _site/index.html
           grep -q "Mission NDA" _site/index.html
