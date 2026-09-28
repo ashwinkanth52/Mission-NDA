@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f3ea">
-<title>Mission NDA — Phase 1 v15</title>
+<title>Mission NDA — Phase 1 v16</title>
 <style>
 :root{--bg:#f7f3ea;--card:#fffdf8;--ink:#17221a;--muted:#68736b;--line:#d9ded8;--accent:#315c45;--accent2:#e6efe8;--warn:#8a5b21;--bad:#8b3a3a}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5}
@@ -20,7 +20,7 @@ nav{display:flex;gap:8px;overflow:auto;padding:0 22px 12px;max-width:1100px;marg
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.two{grid-template-columns:repeat(2,1fr)}
 .topic{display:flex;justify-content:space-between;gap:12px;align-items:center}.pill{display:inline-block;border-radius:999px;padding:3px 9px;background:var(--accent2);font-size:.78rem}
 .progress{height:8px;background:#e6e9e5;border-radius:99px;overflow:hidden}.bar{height:100%;background:var(--accent);width:0}
-.topic-list{display:grid;gap:8px}.topic-row{padding:12px;border:1px solid var(--line);border-radius:12px;background:white}
+.topic-list{display:grid;gap:8px}.stage-list{display:grid;gap:10px}.stage-card{padding:14px;border:1px solid var(--line);border-radius:12px;background:white}.topic-row{padding:12px;border:1px solid var(--line);border-radius:12px;background:white}
 .option{display:block;padding:10px;border:1px solid var(--line);border-radius:10px;margin:8px 0}.option input{margin-right:8px}
 .result{margin-top:14px;padding:14px;border-radius:12px;background:#f1f6f2}.review{border-top:1px solid var(--line);padding:12px 0}.correct{border-left:4px solid #4d805c;padding-left:10px}.incorrect{border-left:4px solid #a8644c;padding-left:10px}
 footer{padding:30px 0 50px;text-align:center;color:var(--muted)}@media(max-width:760px){.wrap{padding:14px}.grid,.two,.role-grid{grid-template-columns:1fr}.head{padding:12px 14px}nav{padding-left:14px;padding-right:14px}.role{min-height:105px}}
@@ -32,7 +32,7 @@ footer{padding:30px 0 50px;text-align:center;color:var(--muted)}@media(max-width
  <div class="card login-card">
   <div class="small muted">MISSION NDA • Sriram Tanaji</div>
   <h1>Welcome</h1>
-  <div id="missionReleaseVersion" class="small muted"><strong>Phase 1 — v15</strong></div>
+  <div id="missionReleaseVersion" class="small muted"><strong>Phase 1 — v16</strong></div>
   <p>One device, two private spaces. Choose who is using Mission NDA.</p>
   <div class="role-grid">
    <button class="role" onclick="chooseRole('student')">🎒<br><strong>Sriram's Space</strong><br><span class="small muted">Today's learning mission</span></button>
@@ -52,7 +52,7 @@ footer{padding:30px 0 50px;text-align:center;color:var(--muted)}@media(max-width
 <main class="wrap">
 <section id="studentView" class="hidden">
  <div class="card"><h2>Today's Mission</h2><p id="todayText" class="muted"></p><div id="mission"></div></div>
- <div class="grid two"><div class="card"><h3>My Progress</h3><div id="studentProgress"></div></div><div class="card"><h3>My Journey</h3><div class="small">🌱 My Foundation</div><div class="small">🧭 My Next Adventure</div><div class="small">🏕️ My Big Challenge</div><div class="small">⭐ AISSEE Mission</div></div></div>
+ <div class="grid two"><div class="card"><h3>My Progress</h3><div id="studentProgress"></div></div><div class="card"><h3>My Journey</h3><div id="studentStages" class="stage-list"></div></div></div>
  <div class="card"><h3>Explore</h3><div id="studentTopics" class="topic-list"></div></div>
 </section>
 <section id="parentView" class="hidden">
@@ -70,6 +70,14 @@ footer{padding:30px 0 50px;text-align:center;color:var(--muted)}@media(max-width
 <script>
 const KEY="missionNDA_progress_v2";
 const CREDENTIALS={student:"SRIRAM2026",parent:"PARENT2026"};
+const stages=[
+ {id:"foundation",name:"Foundation",icon:"🌱",topics:["M01","M02","M03","R01","L01"]},
+ {id:"build",name:"Build",icon:"🧭",topics:["M04","M05","M06","R02","R03"]},
+ {id:"challenge",name:"Big Challenge",icon:"🏕️",topics:["M07","M08","M09","R04","R05"]},
+ {id:"aissee",name:"AISSEE Mission",icon:"⭐",topics:["M10","M11","M12","R06","L02"]}
+];
+function stageProgress(stage){const done=stage.topics.filter(id=>mastery(id)).length;return {done,total:stage.topics.length,pct:Math.round(done/stage.topics.length*100)}}
+function stageCard(stage){const p=stageProgress(stage);return "<div class='stage-card'><div class='topic'><div><strong>"+stage.icon+" "+stage.name+"</strong><br><span class='small muted'>"+p.done+" / "+p.total+" completed</span></div><strong>"+p.pct+"%</strong></div><div class='progress' style='margin-top:8px'><div class='bar' style='width:"+p.pct+"%'></div></div></div>"}
 const curriculum={
  Mathematics:[
  ["M01","Number Sense","Read, compare and order whole numbers.","Foundation"],
@@ -153,7 +161,7 @@ function login(){if(document.getElementById("password").value!==CREDENTIALS[role
 function logout(){role=null;selectedTopic=null;document.getElementById("app").classList.add("hidden");document.getElementById("landing").classList.remove("hidden");document.getElementById("password").value=""}
 function showApp(){document.getElementById("studentView").classList.toggle("hidden",role!=="student");document.getElementById("parentView").classList.toggle("hidden",role!=="parent");document.getElementById("topicView").classList.add("hidden");document.getElementById("subtitle").textContent=role==="student"?"Today's learning journey":"Curriculum, assessment and progress";renderNav();role==="student"?renderStudent():renderParent()}
 function renderNav(){const n=document.getElementById("nav");n.innerHTML="";allTopics().forEach(t=>{if(role==="student"&&t.subject!=="Mathematics")return;const b=document.createElement("button");b.textContent=t[1];b.onclick=()=>openTopic(t[0]);n.appendChild(b)})}
-function renderStudent(){document.getElementById("todayText").textContent="A short mission is enough. Move, read, practise, then stop.";const m=document.getElementById("mission");m.innerHTML="";const t=curriculum.Mathematics.find(x=>x[0]==="M03");const d=document.createElement("div");d.className="topic-row";d.innerHTML="<strong>Multiplication Facts</strong><br><span class='small muted'>Build automatic recall without counting up each time.</span>";const b=document.createElement("button");b.className="primary";b.textContent="Start mission";b.onclick=()=>openTopic("M03");d.appendChild(document.createElement("br"));d.appendChild(b);m.appendChild(d);const p=document.getElementById("studentProgress");const topics=allTopics().filter(t=>t[3]==="Foundation");const done=topics.filter(t=>mastery(t[0])).length;p.innerHTML="<strong>"+done+" / "+topics.length+"</strong> foundation topics showing repeated mastery<div class='progress' style='margin-top:8px'><div class='bar' style='width:"+Math.round(done/topics.length*100)+"%'></div></div>";const list=document.getElementById("studentTopics");list.innerHTML="";curriculum.Mathematics.slice(0,10).forEach(t=>{const d=document.createElement("div");d.className="topic-row";d.innerHTML="<strong>"+t[1]+"</strong> <span class='pill'>"+(mastery(t[0])?"Mastered":"Practise")+"</span><br><span class='small muted'>"+t[2]+"</span>";d.onclick=()=>openTopic(t[0]);list.appendChild(d)})}
+function renderStudent(){document.getElementById("todayText").textContent="A short mission is enough. Move, read, practise, then stop.";const m=document.getElementById("mission");m.innerHTML="";const d=document.createElement("div");d.className="topic-row";d.innerHTML="<strong>Multiplication Facts</strong><br><span class='small muted'>Build automatic recall without counting up each time.</span>";const b=document.createElement("button");b.className="primary";b.textContent="Start mission";b.onclick=()=>openTopic("M03");d.appendChild(document.createElement("br"));d.appendChild(b);m.appendChild(d);const p=document.getElementById("studentProgress");const fp=stageProgress(stages[0]);p.innerHTML="<strong>Foundation: "+fp.done+" / "+fp.total+" completed</strong><div class='progress' style='margin-top:8px'><div class='bar' style='width:"+fp.pct+"%'></div></div><div class='small muted' style='margin-top:6px'>Complete all 5 to finish this first stage.</div>";document.getElementById("studentStages").innerHTML=stages.map(stageCard).join("");const list=document.getElementById("studentTopics");list.innerHTML="";curriculum.Mathematics.slice(0,10).forEach(t=>{const d=document.createElement("div");d.className="topic-row";d.innerHTML="<strong>"+t[1]+"</strong> <span class='pill'>"+(mastery(t[0])?"Mastered":"Practise")+"</span><br><span class='small muted'>"+t[2]+"</span>";d.onclick=()=>openTopic(t[0]);list.appendChild(d)})}
 function renderParent(){const topics=allTopics();const attempts=topics.reduce((n,t)=>n+history(t[0]).length,0);const mas=topics.filter(t=>mastery(t[0])).length;document.getElementById("attemptCount").textContent=attempts;document.getElementById("masteryCount").textContent=mas;const list=document.getElementById("parentTopics");list.innerHTML="";topics.forEach(t=>{const d=document.createElement("div");d.className="topic-row";d.innerHTML="<div class='topic'><div><strong>"+t[1]+"</strong> <span class='pill'>"+t.subject+"</span><br><span class='small muted'>"+t[2]+"</span></div><div>"+(mastery(t[0])?"✓ Mastered":history(t[0]).length+" attempt(s)")+"</div></div>";d.onclick=()=>openTopic(t[0]);list.appendChild(d)});renderHistory()}
 function renderHistory(){const h=document.getElementById("history");const rows=[];allTopics().forEach(t=>history(t[0]).forEach(a=>rows.push({...a,id:t[0],name:t[1]})));rows.sort((a,b)=>b.ts-a.ts);h.innerHTML=rows.length?rows.slice(0,20).map(a=>"<div class='topic-row'><strong>"+a.name+"</strong> — "+a.pct+"% <span class='small muted'>"+new Date(a.ts).toLocaleString()+"</span></div>").join(""):"<p class='muted'>No assessment attempts yet.</p>"}
 function openTopic(id){const t=allTopics().find(x=>x[0]===id);if(!t)return;selectedTopic=id;document.getElementById("studentView").classList.add("hidden");document.getElementById("parentView").classList.add("hidden");document.getElementById("topicView").classList.remove("hidden");const box=document.getElementById("topicContent");box.innerHTML="<h2>"+t[1]+"</h2><p>"+t[2]+"</p><p class='small muted'>Stage: "+t[3]+"</p>";if(assessments[id])renderAssessment(box,id);else box.innerHTML+="<div class='card'><strong>Practice focus</strong><p>Practise this skill briefly with a book, teacher, parent or real-world activity. An assessment will be added when the topic is ready.</p></div>"}
