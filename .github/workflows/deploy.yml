@@ -70,7 +70,7 @@ jobs:
           print("Payload repair complete")
           PY
 
-      - name: Rebuild approved Phase 1 v13 site
+      - name: Rebuild approved Phase 1 v14 site
         run: |
           mkdir -p _site
           cat build/payload/*.b64 | tr -d '\n' | base64 -d > /tmp/mission-nda-v12.gz
@@ -109,7 +109,7 @@ jobs:
           old_empty='  if(!unique.length) box.innerHTML=\'<div class="mission-item">🌟 Great work. Your next challenge will appear when you are ready.</div>\';'
           new_empty='  if(!unique.length){const fallback=Object.values(data).flat().find(x=>x[0]==="M01");if(fallback){const item=document.createElement("div");item.className="mission-item";item.innerHTML="<strong>"+fallback[1]+"</strong> <span class=\"status-pill status-practice\">Ready</span><br><span class=\"small\">Start here: learn and practise this with a parent or teacher.</span>";box.appendChild(item);}else{box.innerHTML=\'<div class="mission-item">🌟 Your next challenge will appear when you are ready.</div>\';}}'
           html = html.replace(old_empty, new_empty)
-          # Parent controls for moving progress between devices.
+          # Apply the v14 assessment review layer.\n          python3 build/patch_v14_assessment_review.py\n\n          # Parent controls for moving progress between devices.
           old_history_panel='<div id="historySummary" class="grid"></div>\n<div id="historyTableWrap"></div>'
           new_history_panel='<div id="historySummary" class="grid"></div>\n<div class="small muted" style="margin-top:12px">Progress is stored on this browser. Export/import lets you carry Sriram\'s learning record to another device.</div>\n<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px">\n<button type="button" onclick="exportProgress()">Export progress</button>\n<button type="button" onclick="openImport()">Import progress</button>\n<input id="progressImport" type="file" accept="application/json" style="display:none" onchange="importProgress(this.files[0]);this.value=\'\'">\n</div>\n<div id="historyTableWrap"></div>'
           html = html.replace(old_history_panel, new_history_panel)
